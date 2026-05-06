@@ -102,9 +102,42 @@ function inlineUses($) {
 function collectPaths($, $node, parentTransform = []) {
   let paths = []
   const currentTransform = $node.attr('transform') || ''
-  if ($node[0].tagName === 'g') {
-    // 更新当前层的累计 transform 和样式
+  const { tagName } = $node[0]
+  if (tagName === 'g') {
+    // 更新当前层 transform
     const newParentTransform = [...parentTransform, currentTransform]
+    // 递归处理子节点
+    $node.children().each((_, child) => {
+      paths = paths.concat(collectPaths($, $(child), newParentTransform))
+    })
+  } else if (tagName === 'svg') {
+    // 处理 x, y 偏移（转换为 translate）
+    let translateXY = ''
+    let x = parseFloat($node.attr('x')) || 0
+    let y = parseFloat($node.attr('y')) || 0
+    if (x !== 0 || y !== 0) {
+      translateXY = `translate(${x}, ${y})`
+    }
+    // 处理 viewBox 和 width/height 带来的变换
+    let viewBoxTransform = ''
+    const viewBox = $node.attr('viewBox')
+    if (viewBox) {
+      const parts = viewBox.trim().split(/\s+/)
+      if (parts.length === 4) {
+        const [vx, vy, vw, vh] = parts.map(v => parseFloat(v))
+        const width = parseFloat($node.attr('width')) || vw
+        const height = parseFloat($node.attr('height')) || vh
+        const sx = width / vw
+        const sy = height / vh
+        if (sx !== 1 || sy !== 1) {
+          viewBoxTransform = `translate(${-vx * sx},${-vy * sy}) scale(${sx},${sy})`
+        } else {
+          viewBoxTransform = `translate(${-vx},${-vy})`
+        }
+      }
+    }
+    // 更新当前层 transform
+    const newParentTransform = [...parentTransform, viewBoxTransform, translateXY, currentTransform]
     // 递归处理子节点
     $node.children().each((_, child) => {
       paths = paths.concat(collectPaths($, $(child), newParentTransform))

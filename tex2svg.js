@@ -19,7 +19,7 @@ async function init() {
 }
 
 async function tex2svg(tex, { fontSize = 16, backgroundColor = 'transparent', color = '#000000' } = {}) {
-  MathJax = await init()
+  const MathJax = await init()
   const texConfig = {
     display: true, // false 为行间公式
     em: 2 * fontSize,
