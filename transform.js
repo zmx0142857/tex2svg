@@ -183,14 +183,14 @@ function flatten($) {
 }
 
 // 主函数
-function transform(svgContent) {
-  const $ = cheerio.load(svgContent, {
+function transform(svg, { use = false, flat = true } = {}) {
+  const $ = cheerio.load(svg, {
     xmlMode: true, // 保持 XML 模式，不自动闭合标签等
     recognizeSelfClosing: true,
   })
 
-  inlineUses($) // 清除 use
-  flatten($) // 扁平化
+  if (!use) inlineUses($) // 清除 use
+  if (flat) flatten($) // 扁平化
 
   return $.xml()
 }

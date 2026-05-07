@@ -15,12 +15,15 @@ stdin.on('readable', () => {
 })
 
 const convert = process.argv.includes('--am')
-  ? (input) => tex2svg(am2tex(input))
+  ? (input, options) => tex2svg(am2tex(input), options)
   : tex2svg
 
 function onEnd () {
   const input = buf.join('\n')
-  convert(input).then(svg => {
+  const options = Object.fromEntries(process.argv.slice(2).map(arg => {
+    return arg.includes('=') ? arg.split('=') : undefined
+  }).filter(Boolean))
+  convert(input, options).then(svg => {
     console.log(svg)
     process.exit()
   })

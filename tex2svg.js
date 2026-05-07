@@ -18,10 +18,15 @@ async function init() {
   })
 }
 
-async function tex2svg(tex, { fontSize = 16, backgroundColor = 'transparent', color = '#000000' } = {}) {
+async function tex2svg(tex, { display = true, use = false, flat = true, fontSize = 16, backgroundColor = 'transparent', color = '#000000' } = {}) {
+  display = String(display) !== 'false'
+  use = String(use) !== 'false'
+  flat = String(flat) !== 'false'
+  fontSize = parseFloat(fontSize)
+
   const MathJax = await init()
   const texConfig = {
-    display: true, // false 为行间公式
+    display, // true: 大公式, false: 行内公式
     em: 2 * fontSize,
     ex: fontSize,
     containerWidth: 80 * fontSize,
@@ -54,7 +59,7 @@ async function tex2svg(tex, { fontSize = 16, backgroundColor = 'transparent', co
   svgReplace.forEach(arg => svg = svg.replace(...arg))
 
   // 去掉 <use> 标签及 svg 扁平化
-  svg = transform(svg)
+  svg = transform(svg, { use, flat })
   return svg
 }
 
