@@ -97,18 +97,24 @@ function inlineUses($) {
  * @param {cheerio} $           cheerio 实例
  * @param {cheerio} $node       当前节点
  * @param {[]} parentTransform 父级累计的 transform
+ * @param {object} parentAttr 父级属性
  * @returns {Array} 收集到的 path 元素（cheerio 元素列表）
  */
-function collectPaths($, $node, parentTransform = []) {
+function collectPaths($, $node, parentTransform = [], parentAttr = {}) {
   let paths = []
   const currentTransform = $node.attr('transform') || ''
-  const { tagName } = $node[0]
+  const { tagName, attribs } = $node[0]
+  const attrs = {}
+  Object.entries(attribs).forEach(([key, value]) => {
+    if (value && ['fill', 'stroke', 'stroke-width'].includes(key)) attrs[key] = value
+  })
   if (tagName === 'g') {
     // 更新当前层 transform
     const newParentTransform = [...parentTransform, currentTransform]
+    const newParentAttr = { ...parentAttr, ...attrs }
     // 递归处理子节点
     $node.children().each((_, child) => {
-      paths = paths.concat(collectPaths($, $(child), newParentTransform))
+      paths = paths.concat(collectPaths($, $(child), newParentTransform, newParentAttr))
     })
   } else if (tagName === 'svg') {
     // 处理 x, y 偏移（转换为 translate）
@@ -138,14 +144,19 @@ function collectPaths($, $node, parentTransform = []) {
     }
     // 更新当前层 transform
     const newParentTransform = [...parentTransform, viewBoxTransform, translateXY, currentTransform]
+    const newParentAttr = { ...parentAttr, ...attrs }
     // 递归处理子节点
     $node.children().each((_, child) => {
-      paths = paths.concat(collectPaths($, $(child), newParentTransform))
+      paths = paths.concat(collectPaths($, $(child), newParentTransform, newParentAttr))
     })
   } else {
     // 合并 transform
     const finalTransform = [...parentTransform, currentTransform].map(v => v.trim()).filter(Boolean).join(' ')
     if (finalTransform) $node.attr('transform', finalTransform)
+    // 合并属性
+    Object.entries(parentAttr).forEach(([key, value]) => {
+      if (value && !$node.attr(key)) $node.attr(key, value)
+    })
     paths.push($node[0])
   }
   return paths

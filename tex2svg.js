@@ -28,6 +28,10 @@ async function tex2svg(tex, { fontSize = 16, backgroundColor = 'transparent', co
   }
 
   const svgReplace = [
+    // 宽
+    [/width="([^e]*)ex"/, (_, $1) => `width="${parseFloat($1) * fontSize}"`],
+    // 高
+    [/height="([^e]*)ex"/, (_, $1) => `height="${parseFloat($1) * fontSize}"`],
     // 颜色
     [/currentColor/g, color],
     // 背景色
@@ -40,34 +44,16 @@ async function tex2svg(tex, { fontSize = 16, backgroundColor = 'transparent', co
     [/&(?![#a-z0-9])/g, '&amp;'],
   ]
 
-  const node = MathJax.tex2svg(tex, texConfig)
-  const dirtySvg = MathJax.startup.adaptor.innerHTML(node)
-  const lastIndex = dirtySvg.lastIndexOf('</svg>')
-  let svg = dirtySvg.slice(0, lastIndex + 6) // '</svg>'.length === 6
+  const node = await MathJax.tex2svgPromise(tex, texConfig)
+  // 丢弃结束标签 </svg> 后面的内容
+  const match = MathJax.startup.adaptor.innerHTML(node).match(/.*<\/svg>/)
+  if (!match) return ''
+  let svg = match[0]
 
-  // 宽高单位从 ex 改为 px
-  const widthReg = /width="[^e]*ex"/
-  const widthMatch = svg.match(widthReg)
-  let width
-  if (widthMatch) {
-    width = parseFloat(widthMatch[0].slice(7)) * fontSize
-    svg = svg.replace(widthReg, `width="${width}"`)
-  }
+  // 正则替换
+  svgReplace.forEach(arg => svg = svg.replace(...arg))
 
-  const heightReg = /height="[^e]*ex"/
-  const heightMatch = svg.match(heightReg)
-  let height
-  if (heightMatch) {
-    height = parseFloat(heightMatch[0].slice(8)) * fontSize
-    svg = svg.replace(heightReg, `height="${height}"`)
-  }
-
-  // 其他正则替换
-  svgReplace.forEach(arg => {
-    svg = svg.replace(...arg)
-  })
-
-  // 去掉 <use> 标签
+  // 去掉 <use> 标签及 svg 扁平化
   svg = transform(svg)
   return svg
 }
